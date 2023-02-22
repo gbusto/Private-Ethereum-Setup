@@ -109,6 +109,9 @@ def startNodes(dirsAddrsZipped, enodeString, passwordFilePath):
     basePort = 30306
     baseRpcPort = 8551
 
+    processesDirName = "processes"
+    os.mkdir(processesDirName)
+
     procs = []
 
     for i in range(len(dirsAddrsZipped)):
@@ -120,8 +123,10 @@ def startNodes(dirsAddrsZipped, enodeString, passwordFilePath):
                 )
         printCommand(cmd)
 
-        proc = Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
-        procs.append(proc)
+        filename = os.path.join(processesDirName, "proc-{}.out".format(directory))
+        with open(filename, "w") as f:
+            proc = Popen(cmd, shell=True, stdout=f, stderr=f)
+            procs.append(proc)
 
     return procs
 
@@ -204,8 +209,9 @@ if __name__ == "__main__":
         dirsAddrsZipped = list(zip(directories, addresses))
         nodeProcesses = startNodes(dirsAddrsZipped, enode, passwordFilename)
     except Exception as e:
+        print("ERROR!")
         print(e)
 
     input("There are {} nodes listening now. Press Enter to stop all nodes...".format(len(nodeProcesses)))
 
-    cleanup(directories, bootnodeProcess, nodeProcesses)
+    cleanup(directories + ["processes"], bootnodeProcess, nodeProcesses)
