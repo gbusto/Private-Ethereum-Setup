@@ -16,12 +16,12 @@ After that, all that's left is to run `python private-eth.py`
 ## Learnings
 * [This](https://geth.ethereum.org/docs/fundamentals/private-network) tutorial for setting up a private PoA network is great. The two things I missed while glancing through this that prevented my network from working correctly are 1) not paying attention to the fact that `extradata` in the genesis file should contain the addresses of all initial signers of the network, and 2) not specifying the `--mine` parameter in the geth command to start the signing nodes. After this, blocks were being mined and I could actually submit transactions
 * Commands and things I used to help diagnose what was happening in the network:
-** `eth.blockNumber` to see what the current block number was to see if anything was being mined
-** Reading the output files from nodes (`proc.out`) to see what was happening and get any insight I could
-** Checking `eth.pendingTransactions` to see if the transaction I just submitted was still pending
-** Checking account balances using `eth.getBalance("<0xABCD>")` to see if ETH had actually been sent
-** Checking `clique.proposals` to see what nodes had been proposed (will talk more about this below)
-** Checking `clique.status()` to see who the sealers are in the network (i.e. the signers)
+  * `eth.blockNumber` to see what the current block number was to see if anything was being mined
+  * Reading the output files from nodes (`proc.out`) to see what was happening and get any insight I could
+  * Checking `eth.pendingTransactions` to see if the transaction I just submitted was still pending
+  * Checking account balances using `eth.getBalance("<0xABCD>")` to see if ETH had actually been sent
+  * Checking `clique.proposals` to see what nodes had been proposed (will talk more about this below)
+  * Checking `clique.status()` to see who the sealers are in the network (i.e. the signers)
 * I learned that in PoA, a node can be either a signing node (also a miner) called a "sealer", or a member node that doesn't mine but acts as a relay
 ** A member node that is not a signer CAN NOT be a miner. Only signers can mine blocks because they have the authority and can prove it via signing
 * If you see the error `unauthorized signer` in the `proc.out` or command output for a node after starting the network up, it likely means that no signers were specified in the `extradata` field of the `genesis.json` file
