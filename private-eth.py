@@ -9,7 +9,7 @@ import shutil
 
 config = {
     "period": 5,
-    "epoch": 30000,
+    "epoch": 300,
     "chainId": 12345,
     "passwordFile": "password.txt",
     "initialBalance": "10000000000000000000",
@@ -40,7 +40,8 @@ genesisJson = {
     "grayGlacierBlock": 0,
     "clique": {
       "period": config.get("period"),
-      "epoch": 30000
+      "epoch": 30000,
+      "signers": 2,
     }
   },
   "difficulty": "1",
@@ -123,7 +124,6 @@ def startNodes(dirsAddrsZipped, enodeString, passwordFilePath):
     # geth --datadir node1 --port 30306 --bootnodes enode://f7aba85ba369923bffd3438b4c8fde6b1f02b1c23ea0aac825ed7eac38e6230e5cadcf868e73b0e28710f4c9f685ca71a86a4911461637ae9ab2bd852939b77f@127.0.0.1:0?discport=30305  --networkid 123454321 --unlock 0xC1B2c0dFD381e6aC08f34816172d6343Decbb12b --password node1/password.txt --authrpc.port 8551
     basePort = 30306
     baseRpcPort = 8551
-    baseHttpPort = 8545
 
     procs = []
 
