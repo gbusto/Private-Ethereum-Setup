@@ -8,7 +8,7 @@ import os
 import shutil
 
 config = {
-    "period": 5,
+    "period": 15,
     "epoch": 300,
     "chainId": 12345,
     "passwordFile": "password.txt",
@@ -16,7 +16,7 @@ config = {
     "baseNodePort": 30306,
     "baseRpcPort": 8551,
     "nodesDir": "nodes",
-    "minerNodes": ["mnode1", "mnode2", "mnode3", "mnode4"],
+    "minerNodes": ["mnode1", "mnode2", "mnode3", "mnode4", "mnode5", "mnode6", "mnode7", "mnode8"],
     "memberNodes": ["node1", "node2", "node3", "node4"],
     "minerNodesRoot": os.path.join("nodes", "miners"),
     "memberNodesRoot": os.path.join("nodes", "members"),
@@ -40,8 +40,7 @@ genesisJson = {
     "grayGlacierBlock": 0,
     "clique": {
       "period": config.get("period"),
-      "epoch": 30000,
-      "signers": 2,
+      "epoch": config.get("epoch"),
     }
   },
   "difficulty": "1",
@@ -123,7 +122,8 @@ def parseBootnodeOutput(proc):
 def startNodes(dirsAddrsZipped, enodeString, passwordFilePath):
     # geth --datadir node1 --port 30306 --bootnodes enode://f7aba85ba369923bffd3438b4c8fde6b1f02b1c23ea0aac825ed7eac38e6230e5cadcf868e73b0e28710f4c9f685ca71a86a4911461637ae9ab2bd852939b77f@127.0.0.1:0?discport=30305  --networkid 123454321 --unlock 0xC1B2c0dFD381e6aC08f34816172d6343Decbb12b --password node1/password.txt --authrpc.port 8551
     basePort = 30306
-    baseRpcPort = 8551
+    baseRpcPort = 9550
+    baseHttpPort = 8545
 
     procs = []
 
@@ -131,11 +131,16 @@ def startNodes(dirsAddrsZipped, enodeString, passwordFilePath):
         directory = dirsAddrsZipped[i][0]
         address = dirsAddrsZipped[i][1]
 
-        cmd = "geth --datadir {} --port {} --bootnodes \"{}\" --networkid 12345 --unlock 0x{} --password {} --authrpc.port {}".format(
-                    directory, basePort + i, enodeString, address, passwordFilePath, baseRpcPort + i
-                )
         if "miner" in directory:
-            cmd += " --mine"
+            cmd = "geth --datadir {} --port {} --bootnodes \"{}\" --networkid 12345 --unlock 0x{} --password {} --authrpc.port {} --mine".format(
+                        directory, basePort + i, enodeString, address, passwordFilePath, baseRpcPort
+                    )
+            baseRpcPort += 1
+        else:
+            cmd = "geth --datadir {} --port {} --bootnodes \"{}\" --networkid 12345 --authrpc.port {} --http --http.addr 127.0.0.1 --http.port {}".format(
+                        directory, basePort + i, enodeString, baseRpcPort + i, baseHttpPort
+                    )
+            baseHttpPort += 1
 
         printCommand(cmd)
 
