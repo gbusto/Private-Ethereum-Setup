@@ -61,10 +61,12 @@ txnReceipt = w3.eth.wait_for_transaction_receipt(txnHash)
 
 print("[+] Contract deployed at address {}".format(txnReceipt.contractAddress))
 
-# targetAddress = Web3.toChecksumAddress("0xe71995019dcb6ce92e799b15fcadea5e89bf6108")
+## NOTE: this is some code from a local contract I've been using in testing
+# targetAddress = deployingAddress
 
 # contract = w3.eth.contract(address=txnReceipt.contractAddress, abi=abi)
 # txnHash = contract.functions.sendMessage("Hello, world!", targetAddress).transact({'from': deployingAddress})
 # txnReceipt = w3.eth.wait_for_transaction_receipt(txnHash)
 
 # messages = contract.functions.getMessages(targetAddress).call({'from': deployingAddress})
+# print(messages)

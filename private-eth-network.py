@@ -407,6 +407,6 @@ if __name__ == "__main__":
         print("ERROR!")
         print(e)
 
-    input("There are {} nodes listening now. Press Enter to stop all nodes...".format(len(nodeProcesses)))
+    input("There are {} nodes listening now. Press Enter to stop all nodes and clean up...".format(len(nodeProcesses)))
 
     cleanup(["nodes"], bootnodeProcess, nodeProcesses)

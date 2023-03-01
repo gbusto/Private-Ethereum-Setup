@@ -26,6 +26,8 @@ You can run the `private-eth-network.py` script manually, but there are two conv
 To run a Clique PoA network, run `./startCliqueNetwork.sh`.
 To run a Quorum IBFT network, run `./startIBFTNetwork.sh`. NOTE: I still haven't fixed the IBFT "unauthorized address" error. Working on it now.
 
+To test that the network is up and running, you can run the `scripts/deploy_contract.py` script to deploy a contract to one of your local nodes. It does this via IPC. All you need is a compiled smart contract and pass in the main JSON file from artifacts. For my truffle-compiled smart contract, it's in `chat-app/contract/artifacts/SecureMessaging.json`. What this script is looking for in that file is the contract ABI and bytecode.
+
 ## Q&A
 ### What is the tmp/ directory?
 This is the output from the `quorum-genesis-tool` command when following instructions on [this](https://docs.goquorum.consensys.net/tutorials/private-network/create-ibft-network) page. I have it in here for reference for the time being while I try to massage Quorum's IBFT consensus into my current script, and it might be useful for others as well. It will be removed in the future.
