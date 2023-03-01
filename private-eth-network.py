@@ -1,23 +1,15 @@
-import subprocess
 from subprocess import Popen, PIPE
 
 import pexpect
 
 import json
 import os
+import sys
 import shutil
 
 import rlp
 
-#CONSENSUS = "clique"
-CONSENSUS = "ibft"
-
-SYSTEM_GETH_BIN = "/usr/local/bin/geth"
-MODIFIED_GETH_BIN = "./quorum/build/bin/geth"
-
-GETH_BIN = SYSTEM_GETH_BIN
-if CONSENSUS == "ibft":
-    GETH_BIN = MODIFIED_GETH_BIN
+import argparse
 
 config = {
     "period": 5,
@@ -123,9 +115,9 @@ def printCommand(cmd):
 def _executeCommand(cmd):
     return Popen(cmd, shell=True, stdout=PIPE, stderr=PIPE)
 
-def initNodeDirs(directories, password):
+def initNodeDirs(gethBin, directories, password):
     for directory in directories:
-        cmd = "{} --datadir {} account new".format(GETH_BIN, directory)
+        cmd = "{} --datadir {} account new".format(gethBin, directory)
         printCommand(cmd)
         proc = pexpect.spawn(cmd)
         while True:
@@ -146,9 +138,9 @@ def initNodeDirs(directories, password):
                 print("Unexpected state?")
                 break
 
-def gethInitGenesis(directories):
+def gethInitGenesis(gethBin, directories):
     for directory in directories:
-        cmd = "{} init --datadir {} genesis.json".format(GETH_BIN, directory)
+        cmd = "{} init --datadir {} genesis.json".format(gethBin, directory)
         printCommand(cmd)
         proc = _executeCommand(cmd)
         proc.wait()
@@ -178,15 +170,15 @@ def parseBootnodeOutput(proc):
 
     return ""
 
-def startNodes(consensus, dirsAddrsZipped, enodeString, passwordFilePath):
+def startNodes(gethBin, consensus, dirsAddrsZipped, enodeString, passwordFilePath):
     if consensus == "ibft":
         _func = startNodesIBFT
     else:
         _func = startNodesClique
 
-    return _func(dirsAddrsZipped, enodeString, passwordFilePath)
+    return _func(gethBin, dirsAddrsZipped, enodeString, passwordFilePath)
 
-def startNodesClique(dirsAddrsZipped, enodeString, passwordFilePath):
+def startNodesClique(gethBin, dirsAddrsZipped, enodeString, passwordFilePath):
     # geth --datadir node1 --port 30306 --bootnodes enode://f7aba85ba369923bffd3438b4c8fde6b1f02b1c23ea0aac825ed7eac38e6230e5cadcf868e73b0e28710f4c9f685ca71a86a4911461637ae9ab2bd852939b77f@127.0.0.1:0?discport=30305  --networkid 123454321 --unlock 0xC1B2c0dFD381e6aC08f34816172d6343Decbb12b --password node1/password.txt --authrpc.port 8551
     basePort = 30306
     baseRpcPort = 9550
@@ -199,17 +191,20 @@ def startNodesClique(dirsAddrsZipped, enodeString, passwordFilePath):
         address = dirsAddrsZipped[i][1]
 
         if "miner" in directory:
-            cmd = "{} --datadir {} --port {} --bootnodes \"{}\" --networkid 12345 --unlock 0x{} --password {} --authrpc.port {} --mine".format(
-                        GETH_BIN, directory, basePort + i, enodeString, address, passwordFilePath, baseRpcPort
+            cmd = "{} --datadir {} --port {} --bootnodes \"{}\" --networkid 12345 --unlock 0x{} --password {} --authrpc.port {} --mine --allow-insecure-unlock".format(
+                        gethBin, directory, basePort + i, enodeString, address, passwordFilePath, baseRpcPort
                     )
             baseRpcPort += 1
         else:
-            cmd = "{} --datadir {} --port {} --bootnodes \"{}\" --networkid 12345 --authrpc.port {} --http --http.addr 127.0.0.1 --http.port {}".format(
-                        GETH_BIN, directory, basePort + i, enodeString, baseRpcPort + i, baseHttpPort
+            cmd = "{} --datadir {} --port {} --bootnodes \"{}\" --networkid 12345 --authrpc.port {} --http --http.addr 127.0.0.1 --http.port {} --allow-insecure-unlock".format(
+                        gethBin, directory, basePort + i, enodeString, baseRpcPort + i, baseHttpPort
                     )
             baseHttpPort += 1
 
         printCommand(cmd)
+
+        if " --allow-insecure-unlock" in cmd:
+            print("[-] WARNING: Using --allow-insecure-unlock which is insecure")
 
         filename = os.path.join(directory, "proc.out")
         with open(filename, "w") as f:
@@ -218,7 +213,7 @@ def startNodesClique(dirsAddrsZipped, enodeString, passwordFilePath):
 
     return procs
 
-def startNodesIBFT(dirsAddrsZipped, enodeString, passwordFilePath):
+def startNodesIBFT(gethBin, dirsAddrsZipped, enodeString, passwordFilePath):
     basePort = 30306
     baseRpcPort = 9550
     baseHttpPort = 8545
@@ -231,16 +226,19 @@ def startNodesIBFT(dirsAddrsZipped, enodeString, passwordFilePath):
 
         if "miner" in directory:
             cmd = "{} --datadir {} --syncmode full --port {} --bootnodes \"{}\" --networkid 12345 --unlock 0x{} --password {} --mine --miner.threads 1 --miner.gasprice 0 --emitcheckpoints --allow-insecure-unlock".format(
-                        GETH_BIN, directory, basePort + i, enodeString, address, passwordFilePath
+                        gethBin, directory, basePort + i, enodeString, address, passwordFilePath
                     )
             baseRpcPort += 1
         else:
             cmd = "{} --datadir {} --syncmode full --port {} --bootnodes \"{}\" --networkid 12345 --http --http.addr 127.0.0.1 --http.port {} --allow-insecure-unlock".format(
-                        GETH_BIN, directory, basePort + i, enodeString, baseHttpPort
+                        gethBin, directory, basePort + i, enodeString, baseHttpPort
                     )
             baseHttpPort += 1
 
         printCommand(cmd)
+
+        if " --allow-insecure-unlock" in cmd:
+            print("[-] WARNING: Using --allow-insecure-unlock which is insecure")
 
         filename = os.path.join(directory, "proc.out")
         with open(filename, "w") as f:
@@ -352,7 +350,20 @@ def cleanup(directories, bootnodeProcess, nodeProcesses):
     removeFile("genesis.json")
 
 if __name__ == "__main__":
-    print("[+] Consensus is {}".format(CONSENSUS))
+    parser = argparse.ArgumentParser(description="Start a private Ethereum network using either Clique PoA or Quorum IBFT")
+    parser.add_argument("--consensus", help="The consensus algorithm to use. Either 'clique' or 'ibft'", choices=["ibft", "clique"], required=True)
+    parser.add_argument("--geth-bin", help="The path to the desired geth binary", required=True)
+    args = parser.parse_args()
+
+    consensus = args.consensus
+    gethBin = args.geth_bin
+
+    if not os.path.exists(gethBin):
+        print("[-] The specified geth binary does not exist")
+        sys.exit(1)
+
+    print("[+] Consensus is {}".format(consensus))
+    print("[+] Using geth binary at {}".format(gethBin))
 
     passwordFilename = config.get("passwordFile")
     bootnodeProcess = None
@@ -367,11 +378,11 @@ if __name__ == "__main__":
         combinedDirs = minerNodesDirs + memberNodesDirs
         makeDirs(combinedDirs)
 
-        initNodeDirs(combinedDirs, password)
+        initNodeDirs(gethBin, combinedDirs, password)
 
         minerAddresses, memberAddresses = getNodeAddresses(combinedDirs)
 
-        if CONSENSUS == "ibft":
+        if consensus == "ibft":
             print("[+] Using IBFT genesis JSON")
             genesisJson = genesisJsonIBFT
         else:
@@ -380,7 +391,7 @@ if __name__ == "__main__":
             
         createGenesisFile(genesisJson, minerAddresses, memberAddresses)
 
-        gethInitGenesis(combinedDirs)
+        gethInitGenesis(gethBin, combinedDirs)
 
         createBootNode()
 
@@ -391,7 +402,7 @@ if __name__ == "__main__":
         addresses = minerAddresses + memberAddresses
 
         dirsAddrsZipped = list(zip(combinedDirs, addresses))
-        nodeProcesses = startNodes(CONSENSUS, dirsAddrsZipped, enode, passwordFilename)
+        nodeProcesses = startNodes(gethBin, consensus, dirsAddrsZipped, enode, passwordFilename)
     except Exception as e:
         print("ERROR!")
         print(e)

@@ -21,7 +21,10 @@ Ensure that `$PATH` contained `geth` and `bootnode` from the previous step insta
 
 Next, install geth. If you're on a Mac like me and have Homebrew installed, you can simply run `brew install geth`
 
-After that, all that's left is to run `python private-eth-network.py`
+You can run the `private-eth-network.py` script manually, but there are two convenience scripts provided once you've run all other instructions above.
+
+To run a Clique PoA network, run `./startCliqueNetwork.sh`.
+To run a Quorum IBFT network, run `./startIBFTNetwork.sh`. NOTE: I still haven't fixed the IBFT "unauthorized address" error. Working on it now.
 
 ## Q&A
 ### What is the tmp/ directory?
@@ -31,10 +34,10 @@ This is the output from the `quorum-genesis-tool` command when following instruc
 These are some short scripts that I've used to test various things and automate some simple processes. I would ideally like to turn this whole script into a shell/terminal of some kind to be used as a local tool for quickly spinning up and managing nodes for testing things. The functionality provided by the scripts would then be available through the shell as a command to automate something within the test network.
 
 ### What consensus protocols are supported?
-Quorum's IBFT and Clique PoA.
+Quorum's IBFT and Clique PoA. You can also just run `python private-eth-network.py --help` to see the supported consensus protocols.
 
 ### How do I change the consensus protocol being used in this script?
-For now, edit `private-eth-network.py` manually at the top of the file. Change the `CONSENSUS` variable.
+Via the `--consensus` parameter for the `private-eth-network.py` script. See the `startIBFTNetwork.sh` or `startCliqueNetwork.sh` scripts for an example.
 
 ### How can I connect to a node locally?
 From inside of this directory, you can connect to a node by using a command like this: `geth attach nodes/miners/mnode1/geth.ipc`
