@@ -2,3 +2,4 @@ myenv/
 nodes/
 boot.key
 genesis.json
+quorum/
