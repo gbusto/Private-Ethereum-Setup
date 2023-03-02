@@ -29,6 +29,11 @@ To run a Quorum IBFT network, run `./startIBFTNetwork.sh`. NOTE: I still haven't
 To test that the network is up and running, you can run the `scripts/deploy_contract.py` script to deploy a contract to one of your local nodes. It does this via IPC. All you need is a compiled smart contract and pass in the main JSON file from artifacts. For my truffle-compiled smart contract, it's in `chat-app/contract/artifacts/SecureMessaging.json`. What this script is looking for in that file is the contract ABI and bytecode.
 
 ## Q&A
+### My nodes aren't starting; it looks like there's already something listening on port 3030X.
+It's possible that some of those geth nodes are still running in the background and weren't properly terminated. This can also happen with the `bootnode` binary.
+
+You can check if `geth` is running by running `ps aux | grep geth` or `ps aux | grep bootnode`. If you see some `geth` nodes still running, you can kill them in one command: `kill -9 ($pgrep -f geth)`. You can use the same command for the `bootnode` process if it's still running.
+
 ### What is the tmp/ directory?
 This is the output from the `quorum-genesis-tool` command when following instructions on [this](https://docs.goquorum.consensys.net/tutorials/private-network/create-ibft-network) page. I have it in here for reference for the time being while I try to massage Quorum's IBFT consensus into my current script, and it might be useful for others as well. It will be removed in the future.
 

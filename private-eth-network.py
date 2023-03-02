@@ -1,4 +1,5 @@
 from subprocess import Popen, PIPE
+import binascii
 
 import pexpect
 
@@ -20,7 +21,7 @@ config = {
     "baseNodePort": 30306,
     "baseRpcPort": 8551,
     "nodesDir": "nodes",
-    "minerNodes": ["mnode1", "mnode2", "mnode3", "mnode4", "mnode5", "mnode6", "mnode7", "mnode8"],
+    "minerNodes": ["mnode1", "mnode2", "mnode3", "mnode4"],
     "memberNodes": ["node1", "node2", "node3", "node4"],
     "minerNodesRoot": os.path.join("nodes", "miners"),
     "memberNodesRoot": os.path.join("nodes", "members"),
@@ -145,14 +146,14 @@ def gethInitGenesis(gethBin, directories):
         proc = _executeCommand(cmd)
         proc.wait()
 
-def createBootNode():
-    cmd = "bootnode -genkey boot.key"
+def createBootNode(bootnodeBin):
+    cmd = "{} -genkey boot.key".format(bootnodeBin)
     printCommand(cmd)
     proc = _executeCommand(cmd)
     proc.wait()
 
-def startBootNode():
-    cmd = "bootnode -nodekey boot.key -addr :30305"
+def startBootNode(bootnodeBin):
+    cmd = "{} -nodekey boot.key -addr :30305".format(bootnodeBin)
     printCommand(cmd)
     proc = _executeCommand(cmd)
     return proc
@@ -301,11 +302,44 @@ def createExtraDataIBFT(addresses):
     for address in addresses:
         validators.append(int("0x" + address, 16))
 
-    extra_data = vanity + rlp.encode([validators, seal, committed_seal]).hex()
+    extraData = vanity + rlp.encode([validators, seal, committed_seal]).hex()
 
-    extra_data = extra_data.replace(old_string,  new_string)
+    extraData = extraData.replace(old_string,  new_string)
 
-    return extra_data
+    if not validateIBFTExtraData(extraData, addresses):
+        raise Exception("Invalid extra data")
+    print("[+] Extra data has been validated!")
+
+    return extraData
+
+def validateIBFTExtraData(extraData, addresses):
+    try:
+        # extraData is a string, and it starts with "0x0000000000000000000000000000000000000000000000000000000000000000" which is the vanity
+        # We need to skip the vanity, and then we decode the rest of the extraData
+        dataToDecode = extraData[66:]
+        # Convert dataToDecode back into a byte array
+        formattedDataToDecode = binascii.unhexlify(dataToDecode)
+        # Attempt to decode the formatted data
+        originalData = rlp.decode(formattedDataToDecode)
+        # This returns a list of lists. We encoded 3 lists using RLP, and the first one is the list of addresses for validators.
+        # That's the one we want to compare to the addresses passed in
+        encodedValidatorAddresses = originalData[0]
+
+        # Iterate over the addresses passed in and compare them to the decoded addresses
+        for i in range(len(addresses)):
+            address1 = addresses[i]
+            address2 = binascii.hexlify(encodedValidatorAddresses[i]).decode("utf-8")
+            if address1 != address2:
+                # If the addresses don't match, validation has failed
+                return False
+
+    except Exception as e:
+        print("ERROR validating IBFT extra data")
+        print(e)
+        return False
+
+    return True
+
 
 def createGenesisFile(genesisJson, minerAddresses, memberAddresses):
     for address in minerAddresses + memberAddresses:
@@ -353,10 +387,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Start a private Ethereum network using either Clique PoA or Quorum IBFT")
     parser.add_argument("--consensus", help="The consensus algorithm to use. Either 'clique' or 'ibft'", choices=["ibft", "clique"], required=True)
     parser.add_argument("--geth-bin", help="The path to the desired geth binary", required=True)
+    parser.add_argument("--bootnode-bin", help="The path to the desired bootnode binary", required=True)
     args = parser.parse_args()
 
     consensus = args.consensus
     gethBin = args.geth_bin
+    bootnodeBin = args.bootnode_bin
 
     if not os.path.exists(gethBin):
         print("[-] The specified geth binary does not exist")
@@ -393,9 +429,9 @@ if __name__ == "__main__":
 
         gethInitGenesis(gethBin, combinedDirs)
 
-        createBootNode()
+        createBootNode(bootnodeBin)
 
-        bootnodeProcess = startBootNode()
+        bootnodeProcess = startBootNode(bootnodeBin)
 
         enode = parseBootnodeOutput(bootnodeProcess)
 
